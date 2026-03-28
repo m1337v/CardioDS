@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 
 #import "ObjcHelper.h"
+#import "kexploit/kfs.h"
 
 void enumerateProcessesUsingBlock(void (^enumerator)(pid_t pid, NSString* executablePath, BOOL* stop));
 void killall(NSString* processName);
@@ -53,6 +54,33 @@ void killall(NSString* processName);
 -(void)saveImage:(UIImage *)image atPath:(NSString *)path {
     [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
     [UIImagePNGRepresentation(image) writeToFile:path atomically:YES];
+}
+
+-(NSArray<NSString *> *)kfsListDirectory:(NSString *)path {
+    if (path.length == 0 || !kfs_is_ready()) {
+        return @[];
+    }
+
+    kfs_entry_t *entries = NULL;
+    int count = 0;
+    int rc = kfs_listdir(path.UTF8String, &entries, &count);
+    if (rc != 0 || entries == NULL || count <= 0) {
+        if (entries != NULL) {
+            kfs_free_listing(entries);
+        }
+        return @[];
+    }
+
+    NSMutableArray<NSString *> *results = [NSMutableArray arrayWithCapacity:(NSUInteger)count];
+    for (int i = 0; i < count; i++) {
+        NSString *name = [NSString stringWithUTF8String:entries[i].name];
+        if (name.length > 0) {
+            [results addObject:name];
+        }
+    }
+
+    kfs_free_listing(entries);
+    return results;
 }
 
 // MARK: - TSUtil

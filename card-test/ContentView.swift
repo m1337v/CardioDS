@@ -1,42 +1,161 @@
 import SwiftUI
 
 struct ContentView: View {
-    private let cardsRootPath = "/var/mobile/Library/Passes/Cards"
-
     @StateObject private var exploit = ExploitManager.shared
     @State private var showNoCardsError = false
     @State private var cards: [Card] = []
+    @State private var detectedCardsRoot = "not-detected"
+    @State private var usedKfsForScan = false
+    @State private var offsetInput = ""
+
+    private let helper = ObjcHelper()
+
+    private func joinPath(_ parent: String, _ child: String) -> String {
+        if parent.hasSuffix("/") {
+            return parent + child
+        }
+        return parent + "/" + child
+    }
+
+    private func listDirectory(_ path: String, usedKfs: inout Bool) -> [String] {
+        let fm = FileManager.default
+        if let direct = try? fm.contentsOfDirectory(atPath: path) {
+            return direct
+        }
+
+        guard exploit.kfsReady else {
+            return []
+        }
+
+        let viaKfs = helper.kfsListDirectory(path)
+        if !viaKfs.isEmpty {
+            usedKfs = true
+        }
+        return viaKfs
+    }
+
+    private func hasCardBundles(at path: String, usedKfs: inout Bool) -> Bool {
+        let entries = listDirectory(path, usedKfs: &usedKfs)
+        return entries.contains { $0.hasSuffix("pkpass") }
+    }
+
+    private func discoverCardsRoot(usedKfs: inout Bool) -> String? {
+        var candidates: [String] = []
+
+        if let detected = exploit.detectedCardsRootPath {
+            candidates.append(detected)
+        }
+        for candidate in exploit.knownCardsRootCandidates where !candidates.contains(candidate) {
+            candidates.append(candidate)
+        }
+
+        for candidate in candidates where hasCardBundles(at: candidate, usedKfs: &usedKfs) {
+            return candidate
+        }
+
+        let passContainers = [
+            "/var/mobile/Library/Passes",
+            "/private/var/mobile/Library/Passes"
+        ]
+
+        for container in passContainers {
+            let topEntries = listDirectory(container, usedKfs: &usedKfs)
+
+            for primary in ["Cards", "Passes", "Wallet"] where topEntries.contains(primary) {
+                let candidate = joinPath(container, primary)
+                if hasCardBundles(at: candidate, usedKfs: &usedKfs) {
+                    return candidate
+                }
+
+                let nestedCards = joinPath(candidate, "Cards")
+                if hasCardBundles(at: nestedCards, usedKfs: &usedKfs) {
+                    return nestedCards
+                }
+            }
+
+            for entry in topEntries {
+                if entry == "." || entry == ".." {
+                    continue
+                }
+
+                let lower = entry.lowercased()
+                if !(lower.contains("card") || lower.contains("pass") || lower.contains("wallet")) {
+                    continue
+                }
+
+                let candidate = joinPath(container, entry)
+                if hasCardBundles(at: candidate, usedKfs: &usedKfs) {
+                    return candidate
+                }
+
+                let nestedCards = joinPath(candidate, "Cards")
+                if hasCardBundles(at: nestedCards, usedKfs: &usedKfs) {
+                    return nestedCards
+                }
+            }
+        }
+
+        return nil
+    }
 
     private func loadCards() {
         cards = getPasses()
     }
 
     private func getPasses() -> [Card] {
-        let fm = FileManager.default
+        var usedKfs = false
+        guard let cardsRoot = discoverCardsRoot(usedKfs: &usedKfs) else {
+            usedKfsForScan = usedKfs
+            detectedCardsRoot = "not-detected"
+            exploit.setDetectedCardsRootPath(nil)
+            return []
+        }
+
+        exploit.setDetectedCardsRootPath(cardsRoot)
+        detectedCardsRoot = cardsRoot
+
         var data = [Card]()
 
-        do {
-            let passes = try fm.contentsOfDirectory(atPath: cardsRootPath).filter { $0.hasSuffix("pkpass") }
+        let passes = listDirectory(cardsRoot, usedKfs: &usedKfs).filter { $0.hasSuffix("pkpass") }
 
-            for pass in passes {
-                let cardDirectory = cardsRootPath + "/" + pass
-                let files = try fm.contentsOfDirectory(atPath: cardDirectory)
+        for pass in passes {
+            let cardDirectory = joinPath(cardsRoot, pass)
+            let files = listDirectory(cardDirectory, usedKfs: &usedKfs)
 
-                if files.contains("cardBackgroundCombined@2x.png") {
-                    data.append(Card(imagePath: cardDirectory + "/cardBackgroundCombined@2x.png", id: pass, format: "@2x.png"))
-                } else if files.contains("cardBackgroundCombined.pdf") {
-                    data.append(Card(imagePath: cardDirectory + "/cardBackgroundCombined.pdf", id: pass, format: ".pdf"))
-                }
+            if files.contains("cardBackgroundCombined@2x.png") {
+                data.append(
+                    Card(
+                        imagePath: joinPath(cardDirectory, "cardBackgroundCombined@2x.png"),
+                        directoryPath: cardDirectory,
+                        bundleName: pass,
+                        format: "@2x.png"
+                    )
+                )
+            } else if files.contains("cardBackgroundCombined.pdf") {
+                data.append(
+                    Card(
+                        imagePath: joinPath(cardDirectory, "cardBackgroundCombined.pdf"),
+                        directoryPath: cardDirectory,
+                        bundleName: pass,
+                        format: ".pdf"
+                    )
+                )
             }
+        }
 
-            return data
-        } catch {
-            return []
+        usedKfsForScan = usedKfs
+        return data
+    }
+
+    private func refreshOffsetInputFromState() {
+        if exploit.hasKernprocOffset {
+            offsetInput = String(format: "0x%llx", exploit.kernprocOffset)
         }
     }
 
     private func recheckAndReload() {
         exploit.refreshAccessProbe()
+        exploit.refreshKernprocOffsetState()
         loadCards()
     }
 
@@ -67,6 +186,20 @@ struct ContentView: View {
             .font(.system(size: 12, weight: .regular, design: .monospaced))
             .foregroundColor(.white.opacity(0.85))
 
+            Text(exploit.hasKernprocOffset
+                 ? String(format: "kernproc_offset=0x%llx", exploit.kernprocOffset)
+                 : "kernproc_offset=missing")
+            .font(.system(size: 11, design: .monospaced))
+            .foregroundColor(exploit.hasKernprocOffset ? .green.opacity(0.9) : .orange)
+
+            Text("cards_root=\(detectedCardsRoot)")
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.white.opacity(0.7))
+
+            Text("scan_mode=\(usedKfsForScan ? "kfs" : "direct")")
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.white.opacity(0.7))
+
             if exploit.darkswordReady {
                 Text(String(
                     format: "kernel_base=0x%llx slide=0x%llx",
@@ -75,6 +208,34 @@ struct ContentView: View {
                 ))
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(.white.opacity(0.7))
+
+                Text(String(
+                    format: "our_proc=0x%llx our_task=0x%llx",
+                    exploit.ourProc,
+                    exploit.ourTask
+                ))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.white.opacity(0.7))
+            }
+
+            HStack(spacing: 8) {
+                TextField("kernproc offset (hex)", text: $offsetInput)
+                    .textFieldStyle(.roundedBorder)
+
+                Button("Set") {
+                    if exploit.setKernprocOffset(from: offsetInput) {
+                        refreshOffsetInputFromState()
+                        recheckAndReload()
+                    }
+                }
+                .foregroundColor(.white)
+
+                Button("Import lara") {
+                    _ = exploit.importLaraKernprocOffset()
+                    refreshOffsetInputFromState()
+                    recheckAndReload()
+                }
+                .foregroundColor(.white)
             }
 
             HStack(spacing: 10) {
@@ -135,7 +296,7 @@ struct ContentView: View {
 
                 if !cards.isEmpty {
                     TabView {
-                        ForEach(cards, id: \.id) { card in
+                        ForEach(cards) { card in
                             CardView(card: card, exploit: exploit)
                         }
                     }
@@ -154,6 +315,14 @@ struct ContentView: View {
                     VStack(spacing: 12) {
                         Text("No Cards Found").foregroundColor(.red)
 
+                        Text("Path: \(detectedCardsRoot)")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.75))
+
+                        Text(usedKfsForScan ? "Directory scan via KFS" : "Directory scan via direct filesystem")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.75))
+
                         Button("Run All + Scan") {
                             runAllAndReload()
                         }
@@ -170,11 +339,15 @@ struct ContentView: View {
                 }
             }
             .alert(isPresented: $showNoCardsError) {
-                Alert(title: Text("No Cards Were Found"))
+                Alert(
+                    title: Text("No Cards Were Found"),
+                    message: Text("Last detected cards root: \(detectedCardsRoot)")
+                )
             }
         }
         .onAppear {
             recheckAndReload()
+            refreshOffsetInputFromState()
         }
     }
 }

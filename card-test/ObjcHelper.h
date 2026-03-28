@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 -(void)refreshWalletServices;
 -(UIImage *)getImageFromData:(NSString *)path;
 -(void)saveImage:(UIImage *)image atPath:(NSString *)path;
+-(NSArray<NSString *> *)kfsListDirectory:(NSString *)path;
 @end
 
 NS_ASSUME_NONNULL_END

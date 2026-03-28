@@ -1,10 +1,15 @@
 import SwiftUI
 import PDFKit
 
-struct Card {
+struct Card: Identifiable {
     var imagePath: String
-    var id: String
+    var directoryPath: String
+    var bundleName: String
     var format: String
+
+    var id: String {
+        directoryPath
+    }
 }
 
 private let helper = ObjcHelper()
@@ -20,7 +25,7 @@ struct CardView: View {
     @State private var errorMessage = ""
 
     private var cardDirectoryPath: String {
-        return "/var/mobile/Library/Passes/Cards/" + card.id
+        return card.directoryPath
     }
 
     private var cardBasePath: String {
@@ -36,7 +41,7 @@ struct CardView: View {
     }
 
     private var cachePath: String {
-        return "/var/mobile/Library/Passes/Cards/" + card.id.replacingOccurrences(of: "pkpass", with: "cache")
+        return cardDirectoryPath.replacingOccurrences(of: "pkpass", with: "cache")
     }
 
     private func removeCacheIfPresent() {
