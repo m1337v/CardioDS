@@ -91,12 +91,19 @@ card-test/
 
 ## Credits
 
-- [GitHub - cisc0disco](https://github.com/cisc0disco/Cardio) — Original Cardio app
-- [GitHub - opa334](https://github.com/opa334/darksword-kexploit) — DarkSword kernel exploit
-- [GitHub - rooootdev](https://github.com/rooootdev/lara) — Lara, XPF integration, libgrabkernel2
-- [GitHub - AlfieCG](https://github.com/alfiecg24) — libgrabkernel2 (kernelcache downloader)
-- [Reddit r/CreditCards - chaoxu](https://dynalist.io/d/ldKY6rbMR3LPnWz4fTvf_HCh) — Community card images
+- [cisc0disco](https://github.com/cisc0disco/Cardio) — Original Cardio app
+- [htimesnine](https://github.com/htimesnine/DarkSword-RCE) — Original DarkSword exploit source
+- [opa334](https://github.com/opa334) — DarkSword kexploit PoC, ChOma (MIT), XPF (MIT)
+- [rooootdev](https://github.com/rooootdev/lara) — Lara (AGPL-3.0), XPF integration reference
+- [AlfieCG](https://github.com/alfiecg24) — libgrabkernel2 (MIT)
+- [AppInstallerIOS](https://github.com/AppInstalleriOS) — Community card images
 
 ## License
 
-This project is provided for educational and research purposes only.
+This project is licensed under the [MIT License](LICENSE).
+
+**Third-party components have their own licenses:**
+- XPF, ChOma (opa334) — MIT
+- libgrabkernel2 (AlfieCG) — MIT
+- Lara (rooootdev) — AGPL-3.0 (used only as reference; no AGPL code is copied)
+- DarkSword (htimesnine / opa334) — see upstream repos
