@@ -144,8 +144,8 @@ enum GitHubService {
     // MARK: - Image Resize
 
     private static func resizeForCard(_ image: UIImage) -> UIImage? {
-        let maxWidth: CGFloat  = 1024
-        let maxHeight: CGFloat = 640
+        let maxWidth: CGFloat  = 1536
+        let maxHeight: CGFloat = 969
 
         let size = image.size
         guard size.width > 0, size.height > 0 else { return nil }
