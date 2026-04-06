@@ -494,6 +494,7 @@ final class CommunityViewModel: ObservableObject {
     @Published var cards: [CommunityCard] = builtInCards
     @Published var countrySections: [CommunityCountrySection] = []
     @Published var searchText = ""
+    @Published var isLoading = true
     @Published var downloadingIDs: Set<String> = []
     @Published var downloadedMessage: String?
     @Published var pendingSaveCard: CommunityCard?
@@ -523,7 +524,63 @@ final class CommunityViewModel: ObservableObject {
     private let categoryOrder = ["Amex", "Chase", "Capital One", "Citi", "Bank of America", "Barclays", "Discover", "US Bank", "Wells Fargo", "Other US", "Other UK", "Other EU"]
 
     init() {
-        rebuildSections()
+        Task { await buildSectionsAsync() }
+    }
+
+    private func buildSectionsAsync() async {
+        let allCards = cards
+        let order = countryOrder
+        let catOrder = categoryOrder
+
+        let sections = await Task.detached(priority: .userInitiated) {
+            Self.buildSectionsOffMain(cards: allCards, countryOrder: order, categoryOrder: catOrder)
+        }.value
+
+        countrySections = sections
+        isLoading = false
+    }
+
+    private static func buildSectionsOffMain(
+        cards: [CommunityCard],
+        countryOrder: [(code: String, name: String, flag: String)],
+        categoryOrder: [String]
+    ) -> [CommunityCountrySection] {
+        var byCountry: [String: [CommunityCard]] = [:]
+        for card in cards {
+            byCountry[card.country, default: []].append(card)
+        }
+
+        var sections: [CommunityCountrySection] = []
+
+        for entry in countryOrder {
+            guard let countryCards = byCountry.removeValue(forKey: entry.code), !countryCards.isEmpty else { continue }
+            let cats = buildCategoriesStatic(from: countryCards, order: categoryOrder)
+            sections.append(CommunityCountrySection(id: entry.code, name: entry.name, flag: entry.flag, categories: cats))
+        }
+
+        for (code, countryCards) in byCountry.sorted(by: { $0.key < $1.key }) {
+            let cats = buildCategoriesStatic(from: countryCards, order: categoryOrder)
+            sections.append(CommunityCountrySection(id: code, name: code, flag: "🌐", categories: cats))
+        }
+
+        return sections
+    }
+
+    private static func buildCategoriesStatic(from cards: [CommunityCard], order: [String]) -> [CommunityCategory] {
+        var dict: [String: [CommunityCard]] = [:]
+        for card in cards {
+            dict[card.category, default: []].append(card)
+        }
+        var cats: [CommunityCategory] = []
+        for key in order {
+            if let list = dict.removeValue(forKey: key) {
+                cats.append(CommunityCategory(id: key, name: key, cards: list))
+            }
+        }
+        for (key, list) in dict.sorted(by: { $0.key < $1.key }) {
+            cats.append(CommunityCategory(id: key, name: key, cards: list))
+        }
+        return cats
     }
 
     // MARK: - Submit Custom Card to GitHub
@@ -588,44 +645,11 @@ final class CommunityViewModel: ObservableObject {
     }
 
     private func rebuildSections() {
-        // Group cards by country
-        var byCountry: [String: [CommunityCard]] = [:]
-        for card in cards {
-            byCountry[card.country, default: []].append(card)
-        }
-
-        var sections: [CommunityCountrySection] = []
-
-        for entry in countryOrder {
-            guard let countryCards = byCountry.removeValue(forKey: entry.code), !countryCards.isEmpty else { continue }
-            let cats = buildCategories(from: countryCards)
-            sections.append(CommunityCountrySection(id: entry.code, name: entry.name, flag: entry.flag, categories: cats))
-        }
-
-        // Any remaining countries not in the order
-        for (code, countryCards) in byCountry.sorted(by: { $0.key < $1.key }) {
-            let cats = buildCategories(from: countryCards)
-            sections.append(CommunityCountrySection(id: code, name: code, flag: "🌐", categories: cats))
-        }
-
-        countrySections = sections
+        Task { await buildSectionsAsync() }
     }
 
     private func buildCategories(from cards: [CommunityCard]) -> [CommunityCategory] {
-        var dict: [String: [CommunityCard]] = [:]
-        for card in cards {
-            dict[card.category, default: []].append(card)
-        }
-        var cats: [CommunityCategory] = []
-        for key in categoryOrder {
-            if let list = dict.removeValue(forKey: key) {
-                cats.append(CommunityCategory(id: key, name: key, cards: list))
-            }
-        }
-        for (key, list) in dict.sorted(by: { $0.key < $1.key }) {
-            cats.append(CommunityCategory(id: key, name: key, cards: list))
-        }
-        return cats
+        Self.buildCategoriesStatic(from: cards, order: categoryOrder)
     }
 
     func downloadCard(_ card: CommunityCard) {
@@ -721,6 +745,16 @@ struct CommunityView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
+            if vm.isLoading {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(1.3)
+                    Text("community_title")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+            } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("community_title")
@@ -852,6 +886,7 @@ struct CommunityView: View {
                 }
                 .padding(.top, 12)
             }
+            } // else
         }
         .onChange(of: vm.downloadedMessage) { msg in
             if msg != nil { showAlert = true }
