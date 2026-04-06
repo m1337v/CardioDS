@@ -541,7 +541,7 @@ final class CommunityViewModel: ObservableObject {
         isLoading = false
     }
 
-    private static func buildSectionsOffMain(
+    nonisolated private static func buildSectionsOffMain(
         cards: [CommunityCard],
         countryOrder: [(code: String, name: String, flag: String)],
         categoryOrder: [String]
@@ -567,7 +567,7 @@ final class CommunityViewModel: ObservableObject {
         return sections
     }
 
-    private static func buildCategoriesStatic(from cards: [CommunityCard], order: [String]) -> [CommunityCategory] {
+    nonisolated private static func buildCategoriesStatic(from cards: [CommunityCard], order: [String]) -> [CommunityCategory] {
         var dict: [String: [CommunityCard]] = [:]
         for card in cards {
             dict[card.category, default: []].append(card)
