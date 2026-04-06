@@ -107,5 +107,15 @@
 "mycards_submit_error" = "无法打开 GitHub。";
 "mycards_submit_read_error" = "无法读取卡片数据。";
 
+/* Custom card submission */
+"custom_submit_button" = "提交自定义卡片设计";
+"custom_submit_hint" = "你的设计将由维护者审核后添加。";
+"custom_submit_error" = "无法准备提交。";
+"custom_submit_opened" = "正在打开 GitHub 提交你的自定义卡片...";
+"custom_submit_send" = "提交";
+"custom_name_title" = "卡片名称";
+"custom_name_placeholder" = "例如 我的自定义设计";
+"custom_name_message" = "输入你的卡片设计名称。";
+
 /* Settings */
 "settings_system_language" = "系统语言";

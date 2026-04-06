@@ -526,6 +526,51 @@ final class CommunityViewModel: ObservableObject {
         rebuildSections()
     }
 
+    // MARK: - Submit Custom Card to GitHub
+
+    func submitCustomCard(name: String, image: UIImage) {
+        guard let pngData = image.pngData() else {
+            downloadedMessage = L("custom_submit_error")
+            return
+        }
+
+        let base64 = pngData.base64EncodedString()
+        let title = "Custom Card Submission: \(name)"
+        let body = """
+        **Card Name:** \(name)
+        **Issuer:** Custom
+        **Country:** N/A
+
+        **Image (base64 PNG):**
+        <details>
+        <summary>Click to expand image data</summary>
+
+        ```
+        \(base64)
+        ```
+        </details>
+
+        ---
+        *Submitted from CardioDS app*
+        """
+
+        let repo = "drkm9743/CardioDS"
+        guard var urlComponents = URLComponents(string: "https://github.com/\(repo)/issues/new") else { return }
+        urlComponents.queryItems = [
+            URLQueryItem(name: "title", value: title),
+            URLQueryItem(name: "body", value: body),
+            URLQueryItem(name: "labels", value: "custom-card")
+        ]
+
+        guard let url = urlComponents.url else {
+            downloadedMessage = L("custom_submit_error")
+            return
+        }
+
+        UIApplication.shared.open(url)
+        downloadedMessage = L("custom_submit_opened")
+    }
+
     var filteredSections: [CommunityCountrySection] {
         if searchText.isEmpty { return countrySections }
         let q = searchText.lowercased()
@@ -667,6 +712,10 @@ struct CommunityView: View {
     @StateObject private var vm = CommunityViewModel()
     @State private var showAlert = false
     @State private var showSaveChoice = false
+    @State private var showImagePicker = false
+    @State private var pickedImage = UIImage()
+    @State private var showNamePrompt = false
+    @State private var customCardName = ""
 
     var body: some View {
         ZStack {
@@ -695,6 +744,35 @@ struct CommunityView: View {
                     .background(Color.white.opacity(0.1))
                     .cornerRadius(10)
                     .padding(.horizontal, 16)
+
+                    // Submit custom card button
+                    Button {
+                        showImagePicker = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus.rectangle.on.folder")
+                                .font(.system(size: 15))
+                            Text(L("custom_submit_button"))
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.purple.opacity(0.6), Color.cyan.opacity(0.4)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(10)
+                    }
+                    .padding(.horizontal, 16)
+
+                    Text(L("custom_submit_hint"))
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.4))
+                        .padding(.horizontal, 16)
 
                     // Card grid by country → category
                     ForEach(vm.filteredSections) { section in
@@ -800,6 +878,29 @@ struct CommunityView: View {
             Button(L("card_cancel"), role: .cancel) {
                 vm.clearPending()
             }
+        }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(sourceType: .photoLibrary, selectedImage: $pickedImage)
+        }
+        .onChange(of: pickedImage) { img in
+            if img.size != .zero {
+                customCardName = ""
+                showNamePrompt = true
+            }
+        }
+        .alert(L("custom_name_title"), isPresented: $showNamePrompt) {
+            TextField(L("custom_name_placeholder"), text: $customCardName)
+            Button(L("custom_submit_send")) {
+                let name = customCardName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else { return }
+                vm.submitCustomCard(name: name, image: pickedImage)
+                pickedImage = UIImage()
+            }
+            Button(L("card_cancel"), role: .cancel) {
+                pickedImage = UIImage()
+            }
+        } message: {
+            Text(L("custom_name_message"))
         }
     }
 }

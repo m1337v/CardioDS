@@ -114,5 +114,15 @@
 "mycards_submit_error" = "No se pudo abrir GitHub.";
 "mycards_submit_read_error" = "No se pudieron leer los datos de la tarjeta.";
 
+/* Custom card submission */
+"custom_submit_button" = "Enviar Diseño de Tarjeta Personalizada";
+"custom_submit_hint" = "Tu diseño será revisado por un maintainer antes de ser añadido.";
+"custom_submit_error" = "No se pudo preparar el envío.";
+"custom_submit_opened" = "Abriendo GitHub para enviar tu tarjeta personalizada...";
+"custom_submit_send" = "Enviar";
+"custom_name_title" = "Nombre de la Tarjeta";
+"custom_name_placeholder" = "ej. Mi Diseño Personalizado";
+"custom_name_message" = "Introduce un nombre para tu diseño de tarjeta.";
+
 /* Settings */
 "settings_system_language" = "Idioma del Sistema";

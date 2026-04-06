@@ -106,5 +106,15 @@
 "mycards_submit_error" = "GitHubを開けませんでした。";
 "mycards_submit_read_error" = "カードデータを読み込めませんでした。";
 
+/* Custom card submission */
+"custom_submit_button" = "カスタムカードデザインを送信";
+"custom_submit_hint" = "デザインはメンテナーが確認後に追加されます。";
+"custom_submit_error" = "送信を準備できませんでした。";
+"custom_submit_opened" = "GitHubを開いてカスタムカードを送信します...";
+"custom_submit_send" = "送信";
+"custom_name_title" = "カード名";
+"custom_name_placeholder" = "例: マイカスタムデザイン";
+"custom_name_message" = "カードデザインの名前を入力してください。";
+
 /* Settings */
 "settings_system_language" = "システム言語";
