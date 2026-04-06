@@ -908,6 +908,7 @@ struct CommunityView: View {
                 }
             )
             .presentationDetents([.medium])
+            .interactiveDismissDisabled()
         }
     }
 }

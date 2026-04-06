@@ -223,7 +223,7 @@ struct MyCardsView: View {
                                     onApply: { applyCard(saved) },
                                     onDelete: { cardToDelete = saved },
                                     onSubmit: {
-                                        submitName = saved.bundleName
+                                        submitName = ""
                                         submitIssuer = ""
                                         submitCountry = ""
                                         cardToSubmit = saved
@@ -280,6 +280,7 @@ struct MyCardsView: View {
                 onCancel: { cardToSubmit = nil }
             )
             .presentationDetents([.medium])
+            .interactiveDismissDisabled()
         }
     }
 
