@@ -1,0 +1,145 @@
+name: Approve Card Submission
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  approve:
+    if: github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Process card submission
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const labels = issue.labels.map(l => l.name);
+
+            // Determine card type
+            const isCustom = labels.includes('custom-card');
+            const isCommunity = labels.includes('community-card');
+            if (!isCustom && !isCommunity) {
+              console.log('No card label found, skipping');
+              return;
+            }
+
+            // Parse markdown table fields
+            function parseField(name) {
+              const re = new RegExp(`\\|\\s*\\*\\*${name}\\*\\*\\s*\\|\\s*(.+?)\\s*\\|`);
+              const m = body.match(re);
+              return m ? m[1].trim() : '';
+            }
+
+            const cardName = parseField('Card Name');
+            const issuer   = parseField('Issuer');
+            const country  = parseField('Country');
+
+            if (!cardName) {
+              console.log('Could not parse card name from issue body');
+              return;
+            }
+
+            // Extract base64 image
+            const b64Match = body.match(/```\s*\n([\s\S]*?)\n\s*```/);
+            if (!b64Match) {
+              console.log('Could not find base64 image in issue body');
+              return;
+            }
+            const base64 = b64Match[1].replace(/\s/g, '');
+
+            // Generate safe ID
+            const safeId = cardName
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '')
+              + '-' + issue.number;
+
+            // Decode image and save
+            const imgDir = 'community-cards/images';
+            if (!fs.existsSync(imgDir)) {
+              fs.mkdirSync(imgDir, { recursive: true });
+            }
+            const imgFile = `${safeId}.jpg`;
+            const imgPath = path.join(imgDir, imgFile);
+            fs.writeFileSync(imgPath, Buffer.from(base64, 'base64'));
+
+            // Build image URL (raw GitHub content)
+            const repo = context.repo;
+            const imageURL = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/main/${imgDir}/${imgFile}`;
+
+            // Read current catalog
+            const catalogPath = 'community-cards/catalog.json';
+            let catalog = [];
+            if (fs.existsSync(catalogPath)) {
+              const raw = fs.readFileSync(catalogPath, 'utf8').trim();
+              if (raw.length > 2) catalog = JSON.parse(raw);
+            }
+
+            // Check for duplicates
+            if (catalog.some(c => c.id === safeId)) {
+              console.log(`Card ${safeId} already in catalog, skipping`);
+              return;
+            }
+
+            // Determine category
+            let category = issuer;
+            if (isCustom) category = 'Custom';
+
+            // Add new card
+            catalog.push({
+              id: safeId,
+              name: cardName,
+              issuer: issuer || 'Custom',
+              country: country || 'N/A',
+              category: category,
+              imageURL: imageURL,
+              author: issue.user.login
+            });
+
+            // Write catalog
+            fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2) + '\n');
+
+            // Commit changes
+            const { execSync } = require('child_process');
+            execSync('git config user.name "CardioDS Bot"');
+            execSync('git config user.email "bot@cardiods.app"');
+            execSync(`git add "${imgPath}" "${catalogPath}"`);
+            execSync(`git commit -m "Add community card: ${cardName} (#${issue.number})"`);
+            execSync('git push');
+
+            // Close issue with comment
+            await github.rest.issues.createComment({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number: issue.number,
+              body: `✅ **Card approved and added to the catalog!**\n\n` +
+                    `- **Name:** ${cardName}\n` +
+                    `- **Issuer:** ${issuer || 'Custom'}\n` +
+                    `- **Country:** ${country || 'N/A'}\n` +
+                    `- **ID:** \`${safeId}\`\n\n` +
+                    `The card will appear in the Community Cards tab automatically.`
+            });
+
+            await github.rest.issues.update({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number: issue.number,
+              state: 'closed'
+            });
+
+            console.log(`Approved card: ${cardName} (${safeId})`);

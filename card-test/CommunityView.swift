@@ -512,6 +512,10 @@ final class CommunityViewModel: ObservableObject {
         ("US", "United States", "🇺🇸"),
         ("CA", "Canada", "🇨🇦"),
         ("UK", "United Kingdom", "🇬🇧"),
+        ("ES", "Spain", "🇪🇸"),
+        ("FR", "France", "🇫🇷"),
+        ("DE", "Germany", "🇩🇪"),
+        ("IT", "Italy", "🇮🇹"),
         ("JP", "Japan", "🇯🇵"),
         ("CN", "China", "🇨🇳"),
         ("KR", "South Korea", "🇰🇷"),
@@ -520,12 +524,47 @@ final class CommunityViewModel: ObservableObject {
         ("SG", "Singapore", "🇸🇬"),
         ("TW", "Taiwan", "🇹🇼"),
         ("EU", "Europe", "🇪🇺"),
+        ("N/A", "Custom", "🎨"),
     ]
 
     private let categoryOrder = ["Amex", "Chase", "Capital One", "Citi", "Bank of America", "Barclays", "Discover", "US Bank", "Wells Fargo", "Other US", "Other UK", "Other EU"]
 
+    private static let remoteCatalogURL = URL(string: "https://raw.githubusercontent.com/drkm9743/CardioDS/main/community-cards/catalog.json")!
+
     init() {
-        Task { await buildSectionsAsync() }
+        Task { await loadAndBuild() }
+    }
+
+    private func loadAndBuild() async {
+        // Fetch remote catalog and merge with built-in
+        let remote = await Self.fetchRemoteCatalog()
+        if !remote.isEmpty {
+            // Merge: built-in + remote, deduplicate by id
+            var seen = Set(builtInCards.map(\.id))
+            var merged = builtInCards
+            for card in remote {
+                if !seen.contains(card.id) {
+                    seen.insert(card.id)
+                    merged.append(card)
+                }
+            }
+            cards = merged
+        }
+        await buildSectionsAsync()
+    }
+
+    nonisolated private static func fetchRemoteCatalog() async -> [CommunityCard] {
+        do {
+            var request = URLRequest(url: remoteCatalogURL)
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            request.timeoutInterval = 10
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return [] }
+            return try JSONDecoder().decode([CommunityCard].self, from: data)
+        } catch {
+            print("[community] remote catalog fetch failed: \(error)")
+            return []
+        }
     }
 
     private func buildSectionsAsync() async {
