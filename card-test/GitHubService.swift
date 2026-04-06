@@ -158,14 +158,16 @@ enum GitHubService {
 
     // MARK: - Compress for Upload
 
-    /// Progressively lower JPEG quality until under 180 KB (base64 ~250 KB).
+    /// Progressively lower JPEG quality until base64 fits GitHub's 65 536-char issue body limit.
+    /// 44 000 bytes raw ≈ 59 000 chars base64, leaving room for the markdown template.
     private static func compressForUpload(_ image: UIImage) -> Data? {
-        for q in stride(from: 0.7, through: 0.1, by: -0.1) {
-            if let data = image.jpegData(compressionQuality: CGFloat(q)), data.count < 180_000 {
+        for q in stride(from: 0.6, through: 0.05, by: -0.05) {
+            if let data = image.jpegData(compressionQuality: CGFloat(q)), data.count <= 44_000 {
                 return data
             }
         }
-        return image.jpegData(compressionQuality: 0.1)
+        // Last resort: lowest quality
+        return image.jpegData(compressionQuality: 0.01)
     }
 
     // MARK: - Image Resize
