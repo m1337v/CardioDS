@@ -33,7 +33,7 @@ enum GitHubService {
 
     static func submitCustomCard(name: String, image: UIImage) async -> SubmissionResult {
         guard let resized = resizeForCard(image),
-              let jpegData = resized.jpegData(compressionQuality: 0.85) else {
+              let jpegData = compressForUpload(resized) else {
             return SubmissionResult(success: false, message: L("custom_submit_error"), issueURL: nil)
         }
 
@@ -68,7 +68,7 @@ enum GitHubService {
     // MARK: - Submit Dumped Card
 
     static func submitDumpedCard(name: String, bundleName: String, date: String, image: UIImage) async -> SubmissionResult {
-        guard let jpegData = image.jpegData(compressionQuality: 0.85) else {
+        guard let jpegData = compressForUpload(image) else {
             return SubmissionResult(success: false, message: L("mycards_submit_read_error"), issueURL: nil)
         }
 
@@ -148,11 +148,24 @@ enum GitHubService {
             } else if httpResp.statusCode == 401 || httpResp.statusCode == 403 {
                 return SubmissionResult(success: false, message: L("github_token_invalid"), issueURL: nil)
             } else {
-                return SubmissionResult(success: false, message: L("custom_submit_error"), issueURL: nil)
+                let bodySnippet = String(data: data.prefix(200), encoding: .utf8) ?? ""
+                return SubmissionResult(success: false, message: "HTTP \(httpResp.statusCode): \(bodySnippet)", issueURL: nil)
             }
         } catch {
             return SubmissionResult(success: false, message: "\(L("custom_submit_error")): \(error.localizedDescription)", issueURL: nil)
         }
+    }
+
+    // MARK: - Compress for Upload
+
+    /// Progressively lower JPEG quality until under 180 KB (base64 ~250 KB).
+    private static func compressForUpload(_ image: UIImage) -> Data? {
+        for q in stride(from: 0.7, through: 0.1, by: -0.1) {
+            if let data = image.jpegData(compressionQuality: CGFloat(q)), data.count < 180_000 {
+                return data
+            }
+        }
+        return image.jpegData(compressionQuality: 0.1)
     }
 
     // MARK: - Image Resize
