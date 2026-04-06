@@ -51,6 +51,14 @@
 		D200000328E9000000BBB001 /* offsets.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = offsets.h; sourceTree = "<group>"; };
 		D200000428E9000000BBB001 /* xpf_minimal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xpf_minimal.h; sourceTree = "<group>"; };
 		D200000528E9000000BBB001 /* libgrabkernel2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libgrabkernel2.h; sourceTree = "<group>"; };
+		D200001228E9000000BBB011 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D200001328E9000000BBB012 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D200001428E9000000BBB013 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D200001528E9000000BBB014 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D200001628E9000000BBB015 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D200001728E9000000BBB016 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D200001828E9000000BBB017 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		D200001928E9000000BBB018 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
