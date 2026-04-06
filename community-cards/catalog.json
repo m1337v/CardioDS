@@ -7,5 +7,14 @@
     "category": "Custom",
     "imageURL": "https://raw.githubusercontent.com/drkm9743/CardioDS/main/community-cards/images/john-pork-pay-4.jpg",
     "author": "drkm9743"
+  },
+  {
+    "id": "imagin-d-bito-2",
+    "name": "imagin débito",
+    "issuer": "La Caixa",
+    "country": "ES",
+    "category": "La Caixa",
+    "imageURL": "https://raw.githubusercontent.com/drkm9743/CardioDS/main/community-cards/images/imagin-d-bito-2.jpg",
+    "author": "drkm9743"
   }
 ]
