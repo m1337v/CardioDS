@@ -122,7 +122,6 @@ Help build the community card catalog! If you have a card design that isn't in t
 5. A maintainer will review and add your card to the built-in catalog
 
 **Requirements for submissions:**
-- Image should be a high-resolution card background (ideally 1380×870 or similar 16:10 ratio)
 - Include the card name, issuer, and country in the issue title
 - One card per issue — submit multiple issues for multiple cards
 - Submitted card images must not contain personal information (card number is automatically stripped by Apple Pay)
