@@ -43,5 +43,14 @@
     "category": "Raiffeisen Bank",
     "imageURL": "https://raw.githubusercontent.com/drkm9743/CardioDS/main/community-cards/images/classic-11.jpg",
     "author": "drkm9743"
+  },
+  {
+    "id": "classic-9",
+    "name": "Classic",
+    "issuer": "Banca Intesa",
+    "country": "Serbia",
+    "category": "Banca Intesa",
+    "imageURL": "https://raw.githubusercontent.com/drkm9743/CardioDS/main/community-cards/images/classic-9.jpg",
+    "author": "drkm9743"
   }
 ]
