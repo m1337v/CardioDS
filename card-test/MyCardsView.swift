@@ -310,18 +310,24 @@ struct MyCardsView: View {
             return
         }
 
-        let targetPath = deviceCard.directoryPath + "/" + deviceCard.backgroundFileName
+        guard let backgroundFileName = deviceCard.backgroundFileName else {
+            vm.statusMessage = "This wallet item does not expose a single replaceable artwork file."
+            return
+        }
+
+        let targetPath = deviceCard.directoryPath + "/" + backgroundFileName
 
         do {
             try exploit.overwriteWalletFile(targetPath: targetPath, data: data)
-            // Remove cache
-            let cachePath: String
-            if deviceCard.directoryPath.lowercased().hasSuffix(".pkpass") {
-                cachePath = deviceCard.directoryPath.replacingOccurrences(of: "pkpass", with: "cache")
-            } else {
-                cachePath = deviceCard.directoryPath + ".cache"
+            // Remove the sibling Wallet cache bundle so manifest/art changes are re-read.
+            var cacheCandidates = [deviceCard.directoryPath + ".cache"]
+            let normalizedCachePath = (deviceCard.directoryPath as NSString).deletingPathExtension + ".cache"
+            if normalizedCachePath != cacheCandidates[0] {
+                cacheCandidates.append(normalizedCachePath)
             }
-            try? FileManager.default.removeItem(atPath: cachePath)
+            for cachePath in cacheCandidates {
+                try? FileManager.default.removeItem(atPath: cachePath)
+            }
             helper.refreshWalletServices()
             vm.statusMessage = "Applied \(saved.name) to device"
         } catch {
